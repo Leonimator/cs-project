@@ -1,51 +1,65 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+import streamlit as st, pandas as pd, numpy as np, yfinance as yf
+import plotly.express as px
+# it does not have plotly nor yfinance in its library, have to fix
 
-import streamlit as st
-from streamlit.logger import get_logger
+st.title("BullBear Stock Analysis")
+ticker = st.sidebar.text_input("Ticker")
+start_date = st.sidebar.date_input("Start Date")
+end_date = st.sidebar.date_input("End Date")
 
-LOGGER = get_logger(__name__)
+data = yf.download(ticker,start=start_date, end=end_date)
+fig = px.line(data, x = data.index, y = data ["Adj CLose"],title = ticker) #this is for the line-chart with a built in zoom feature
+st.plotly_chart(fig)
+
+pricing_data, fundamental_data, news = st.tabs(["Pricing Data", "Fundamental Data", "Top 10 News"])
+
+with pricing_data:
+    st.header("Price Movements")
+    st.write("data") #corrected data here to word
+    data2 = data
+    data2["% Change"] = data["Adj Close"] / data["Adj Close"].shift(1) - 1
+    data2.dropna(inplace = True)
+    annual_return = data2["% Change"].mean()*252*100
+    st.write("Annual Return is", annual_return, "%")
+    stdev = np.std(data2[" % Change"])*np.sqrt(252)
+    st.write("Standard Deviation is", stdev*100, "%")
+    st.write("Risk Adj. Return is", annual_return/(stdev*100))
+
+from alpha_vantage.fundamentaldata import FundamentalData
+with fundamental_data:
+    key = #insert key here
+    fd = FundamentalData(key, output_format = "pandas")
+    st.subheader("Balance Sheet")
+    balance_sheet = fd.get_balance_sheet_annual(ticker)[0]
+    bs = balance_sheet.T[2:]
+    bs.columns = list(balance_sheet.T.iloc[0])
+    st.write(bs)
+    st.subheader("Income Statement")
+    income_statement = fd.get_income_statement_annual(ticker)[0]
+    is1 = income_statement.T[2:]
+    is1.columns = list(income_statement.T.iloc[0])
+    st.write(is1)
+    st.subheader("Cash Flow Statement")
+    cash_flow = fd.get_cash_flow_annual(ticker)[0]
+    cf = cash_flow.T[2:]
+    cf.columns = list(cash_flow.T.iloc[0])
+    st.write(cf)
 
 
-def run():
-    st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
-    )
-
-    st.write("# Welcome to Streamlit! 👋")
-
-    st.sidebar.success("Select a demo above.")
-
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
-    """
-    )
+from stocknews import StockNews
+with news:
+    st.header(f"News of {ticker}")
+    sn = StockNews(ticker, save_news=False)
+    df_news = sn.read_rss()
+    for i in range(10):
+        st.subheader(f"News {i+1}")
+        st.write(df_news["published"][i])
+        st.write(df_news["title"][i])
+        st.write(df_news["summary"][i])
+        title_sentiment = df_news["sentiment_title"][i]
+        st.write(f"Title Sentiment" {title_sentiment}")
+        news_sentiment = df_news["sentiment_summary"][i]
+        st.write(f"News Sentiment {news_sentiment}")
 
 
-if __name__ == "__main__":
-    run()
+

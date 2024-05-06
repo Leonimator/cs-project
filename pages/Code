@@ -50,7 +50,7 @@ with fundamental_data:
 from stocknews import StockNews
 with news:
     st.header(f"News of {ticker}")
-    sn = stockNews(ticker, save_news=False)
+    sn = StockNews(ticker, save_news=False)
     df_news = sn.read_rss()
     for i in range(10):
         st.subheader(f"News {i+1}")
