@@ -7,9 +7,18 @@ ticker = st.sidebar.text_input("Ticker")
 start_date = st.sidebar.date_input("Start Date")
 end_date = st.sidebar.date_input("End Date")
 
-data = yf.download(ticker,start=start_date, end=end_date)
-fig = px.line(data, x = data.index, y = data ["Adj CLose"],title = ticker) #this is for the line-chart with a built in zoom feature
+try:
+  data = yf.download(ticker,start=start_date, end=end_date)
+  if data.empty:
+      print("No data found for the specified range and ticker.")
+  else:
+       print(data)
+except Exception as e:
+  print(f"Failed to download data: {e}")
+
+fig = px.line(data, x = data.index, y = data['Adj Close'],title = ticker) #this is for the line-chart with a built in zoom feature
 st.plotly_chart(fig)
+
 
 pricing_data, fundamental_data, news = st.tabs(["Pricing Data", "Fundamental Data", "Top 10 News"])
 
@@ -21,10 +30,11 @@ with pricing_data:
     data2.dropna(inplace = True)
     annual_return = data2["% Change"].mean()*252*100
     st.write("Annual Return is", annual_return, "%")
-    stdev = np.std(data2[" % Change"])*np.sqrt(252)
+    stdev = np.std(data2["% Change"])*np.sqrt(252)
     st.write("Standard Deviation is", stdev*100, "%")
     st.write("Risk Adj. Return is", annual_return/(stdev*100))
 
+#find free alternative
 from alpha_vantage.fundamentaldata import FundamentalData
 with fundamental_data:
     key = "U3TZCD5BHFMG8QLG"
@@ -45,7 +55,7 @@ with fundamental_data:
     cf.columns = list(cash_flow.T.iloc[0])
     st.write(cf)
 
-
+#find free alternative
 from stocknews import StockNews
 with news:
     st.header(f"News of {ticker}")
